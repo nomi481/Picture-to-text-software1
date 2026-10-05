@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Swat Islamia School and College – Image to Text</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+.school{display:flex;align-items:center;justify-content:center;gap:12px;text-align:center;padding:16px;margin-bottom:16px;border-radius:14px;background:linear-gradient(90deg,#2f5d50,#5b46b5);color:#fff;font-weight:800;font-size:clamp(1.2rem,4vw,2rem);letter-spacing:.3px;box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.school span{font-size:1.6em}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f1f4f2;--card:rgba(255,255,255,.82);--bgimg:radial-gradient(900px 520px at 8% -10%,#bfe3d6 0,transparent 60%),radial-gradient(800px 520px at 100% 0,#dcd3f5 0,transparent 55%),radial-gradient(700px 500px at 50% 110%,#fbe3cf 0,transparent 60%),linear-gradient(180deg,#f3f7f5,#edf0f7);--ink:#1d1d1b;--mute:#6b6a64;--line:#dcdad2;--acc:#2f5d50;--accink:#fff;--err:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181a;--card:rgba(28,32,36,.8);--bgimg:radial-gradient(900px 520px at 8% -10%,#14463d 0,transparent 60%),radial-gradient(800px 520px at 100% 0,#2b2257 0,transparent 55%),radial-gradient(700px 500px at 50% 110%,#3a2416 0,transparent 60%),linear-gradient(180deg,#0e1315,#12121a);--ink:#efeee9;--mute:#9b9a92;--line:#3a3a36;--acc:#7fb8a6;--accink:#10201b;--err:#f2928b}}
+:root[data-theme="dark"]{--bg:#14181a;--card:rgba(28,32,36,.8);--bgimg:radial-gradient(900px 520px at 8% -10%,#14463d 0,transparent 60%),radial-gradient(800px 520px at 100% 0,#2b2257 0,transparent 55%),radial-gradient(700px 500px at 50% 110%,#3a2416 0,transparent 60%),linear-gradient(180deg,#0e1315,#12121a);--ink:#efeee9;--mute:#9b9a92;--line:#3a3a36;--acc:#7fb8a6;--accink:#10201b;--err:#f2928b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);background-image:var(--bgimg);background-attachment:fixed;background-repeat:no-repeat;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+main{max-width:1200px;margin:0 auto;padding:18px 16px 48px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+h1{font-size:1.6rem;margin:0;background:linear-gradient(90deg,var(--acc),#7a5cd6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mute);margin:2px 0 0;font-size:.95rem}
+.app{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:820px){.app{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.right{position:sticky;top:12px}}
+.card{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,.07);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+h2{font-size:1rem;margin:0 0 10px}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:26px 14px;text-align:center;cursor:pointer;color:var(--mute)}
+#drop.over{border-color:var(--acc);color:var(--ink)}
+button,select{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer}
+button.primary{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+button.sm{padding:5px 10px;font-size:.85rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px}
+.th{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.th img{width:100%;height:130px;object-fit:cover;display:block}
+.th small{display:block;padding:3px 6px;font-size:.72rem;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th b{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.65);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;cursor:pointer;font-size:.85rem}
+.th .doc{height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:1.3rem;color:var(--acc)}
+.th i{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-style:normal;font-size:.75rem;background:rgba(0,0,0,.6);color:#fff;padding:2px}
+textarea{width:100%;min-height:420px;font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px;resize:vertical;line-height:1.7}
+#status{margin-top:12px;color:var(--mute);min-height:1.4em}
+.err{color:var(--err)}
+.hidden{display:none}
+.stats{color:var(--mute);font-size:.85rem;margin-top:8px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:s .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<main>
+<div class="school"><span>🎓</span><div>Swat Islamia School and College</div></div>
+<header>
+  <div><h1>Image to Text</h1><p class="sub">Add a picture, PDF, Word, PowerPoint, Excel or text file on the left → tap Extract → the text appears on the right.</p></div>
+  <button id="theme" class="sm" title="Light / dark">◐</button>
+</header>
+
+
+<div class="app">
+  <!-- LEFT: input -->
+  <div class="left">
+    <div class="card">
+      <h2>1. Your files</h2>
+      <div id="drop">Tap to choose files, drag &amp; drop, or paste (Ctrl+V)<br><small>Up to 6 files · Pictures (pen + printed) · PDF · Word .docx · PowerPoint .pptx · Excel/CSV · TXT</small></div>
+      <input id="file" type="file" accept="image/*,.pdf,.docx,.pptx,.xlsx,.xls,.csv,.txt,.md,.json,.html,.htm,.xml" multiple hidden>
+      <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+      <div class="row"><button id="camBtn">📷 Take photo</button><button id="clear" class="hidden">Clear all</button></div>
+      <div id="thumbs" class="grid"></div>
+    </div>
+    <div class="card" id="keyCard">
+      <h2>Reading engine <small style="font-weight:400;color:var(--mute)">(for pictures &amp; scanned pages)</small></h2>
+      <label class="f">Choose how the text is read
+        <select id="engine" style="width:100%">
+          <option value="tess">Free offline OCR — unlimited, no key (best for printed text)</option>
+          <option value="gemini">Gemini AI — free key (reads handwriting, has a daily limit)</option>
+          <option value="claude">Claude AI — paid key (best handwriting)</option>
+        </select></label>
+      <div id="gBox" class="row hidden">
+        <label class="f" style="flex:1;min-width:200px">Free Gemini key (aistudio.google.com/apikey)
+          <input id="gkey" type="password" placeholder="AIza..." autocomplete="off" style="font:inherit;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+        <label class="f">Model <input id="gmodel" value="gemini-flash-latest" style="font:inherit;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)" style="width:190px;font:inherit;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+      </div>
+      <div id="cBox" class="row hidden">
+        <label class="f" style="flex:1;min-width:200px">Anthropic API key (console.anthropic.com)
+          <input id="akey" type="password" placeholder="sk-ant-..." autocomplete="off" style="font:inherit;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+        <label class="f">Model <input id="model" value="claude-sonnet-5-5" style="font:inherit;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)" style="width:170px;font:inherit;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)"></label>
+      </div>
+      <div class="row"><button id="ktest" class="sm">Test engine</button><span id="kmsg" class="stats" style="margin:0"></span></div>
+      <div class="stats">Free OCR runs inside your browser: no key, no limit, nothing is uploaded — but it reads <b>printed</b> text well and pen handwriting poorly. Keys are stored only in your browser. PDF text, Word, PowerPoint, Excel and text files never need a key.</div>
+    </div>
+    <div class="card">
+      <h2>2. Extract</h2>
+      <div class="row" style="margin-top:0">
+        <label class="f">Language
+          <select id="lang"><option>Auto-detect</option><option>English</option><option>Urdu</option><option>Pashto</option><option>Arabic</option><option>Hindi</option><option>Persian</option></select></label>
+        <label class="f">Output style
+          <select id="mode"><option value="plain">All text together</option><option value="split">Handwritten / printed separate</option><option value="clean">Fix spelling &amp; punctuation</option></select></label>
+      </div>
+      <div class="row"><button id="go" class="primary" disabled>Extract text →</button><button id="stop" class="hidden">Stop</button></div>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: result -->
+  <div class="right">
+    <div class="card">
+      <h2>3. Extracted text</h2>
+      <textarea id="out" dir="auto" placeholder="Your extracted text will appear here…"></textarea>
+      <div class="stats" id="stats">0 words · 0 characters</div>
+      <div class="row">
+        <button id="copy" class="primary">Copy all text</button>
+        <button id="save">Download .txt</button>
+        <button id="wipe" class="sm">Clear text</button>
+      </div>
+      <div id="msg" class="stats"></div>
+    </div>
+    <div class="card">
+      <h2>Translate (optional)</h2>
+      <div class="row" style="margin-top:0">
+        <select id="tlang"><option>English</option><option>Urdu</option><option>Pashto</option><option>Arabic</option><option>Hindi</option><option>French</option><option>Spanish</option></select>
+        <button id="tr">Translate the text above</button>
+      </div>
+      <textarea id="tout" dir="auto" style="min-height:130px;margin-top:10px" placeholder="Translation appears here"></textarea>
+      <div class="row"><button id="tcopy" class="sm">Copy translation</button></div>
+    </div>
+  </div>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const LS=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let items=[],ctl=null,sampleFn=null,running=false;
+
+$('theme').onclick=()=>{const r=document.documentElement,d=r.dataset.theme==='dark'||(!r.dataset.theme&&matchMedia('(prefers-color-scheme:dark)').matches);r.dataset.theme=d?'light':'dark';SV('theme',r.dataset.theme)};
+{const t=LS('theme');if(t)document.documentElement.dataset.theme=t}
+
+// ---- adding images
+$('drop').onclick=()=>$('file').click();
+$('camBtn').onclick=()=>$('cam').click();
+$('file').onchange=e=>{add(e.target.files);e.target.value=''};
+$('cam').onchange=e=>{add(e.target.files);e.target.value=''};
+$('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('over')};
+$('drop').ondragleave=()=>$('drop').classList.remove('over');
+$('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('over');add(e.dataTransfer.files)};
+document.addEventListener('paste',e=>add([...(e.clipboardData?.files||[])]));
+$('clear').onclick=()=>{if(!running){items=[];draw()}};
+const ext=n=>(String(n).split('.').pop()||'').toLowerCase();
+function kind(f){const e=ext(f.name);
+  if((f.type||'').startsWith('image/'))return 'img';
+  if(e==='pdf')return 'pdf';if(e==='docx')return 'docx';if(e==='pptx')return 'pptx';
+  if(['xlsx','xls','csv'].includes(e))return 'sheet';
+  if(['txt','md','json','html','htm','xml','log'].includes(e)||(f.type||'').startsWith('text/'))return 'text';
+  return null}
+function add(fl){
+  $('status').className='';$('status').textContent='';
+  for(const f of fl){
+    const k=kind(f);
+    if(!k){$('status').className='err';$('status').textContent='"'+f.name+'" is not supported'+(ext(f.name)==='doc'?' — old .doc files: save as .docx or PDF first.':'. Use picture, PDF, .docx, .pptx, Excel, CSV or text files.');continue}
+    if(items.length>=6){$('status').className='err';$('status').textContent='Maximum 6 files at once.';break}
+    items.push({file:f,name:f.name||'photo',kind:k,url:k==='img'?URL.createObjectURL(f):'',state:''});
+  }
+  draw();
+}
+function draw(){
+  $('thumbs').innerHTML='';
+  items.forEach((it,i)=>{
+    const d=document.createElement('div');d.className='th';
+    let im;if(it.kind==='img'){im=document.createElement('img');im.src=it.url}else{im=document.createElement('div');im.className='doc';im.textContent='.'+ext(it.name).toUpperCase()}
+    const x=document.createElement('b');x.textContent='×';x.onclick=()=>{if(!running){items.splice(i,1);draw()}};
+    const s=document.createElement('small');s.textContent=it.name;
+    d.append(im,x,s);
+    if(it.state){const b=document.createElement('i');b.textContent=it.state;d.append(b)}
+    $('thumbs').append(d);
+  });
+  $('go').disabled=running||!items.length;
+  $('clear').classList.toggle('hidden',!items.length);
+}
+
+// ---- prompt
+function makePrompt(){
+  const lang=$('lang').value,m=$('mode').value;
+  let p="This image contains text written by pen (handwriting) and/or text typed/printed by computer. Read ALL the text carefully, keeping the original reading order and line breaks. ";
+  p+=lang==='Auto-detect'?"Detect the language(s) automatically and keep each in its own script. ":"The text is mainly in "+lang+"; keep it in its original script. ";
+  if(m==='split')p+="Output two sections: a line 'HANDWRITTEN:' followed by the handwritten text, then a line 'PRINTED:' followed by the typed/printed text. Write (none) under a section if empty. ";
+  else if(m==='clean')p+="Fix obvious spelling mistakes and punctuation, but do not change meaning or add words. ";
+  p+="Output ONLY the text, no commentary or markdown. Mark unreadable words as [unclear]. If there is no text, output exactly: No text found.";
+  return p;
+}
+
+// ---- engine + keys
+const ENG=()=>$('engine').value;
+const GKEY=()=>{try{return(localStorage.getItem('gkey')||'').trim()}catch(e){return ''}};
+const FIELDS=['engine','akey','model','gkey','gmodel'];
+try{FIELDS.forEach(id=>{const v=localStorage.getItem('f_'+id);if(v!==null)$(id).value=v})}catch(e){}
+function showBoxes(){$('gBox').classList.toggle('hidden',ENG()!=='gemini');$('cBox').classList.toggle('hidden',ENG()!=='claude')}
+FIELDS.forEach(id=>{$(id).oninput=$(id).onchange=()=>{try{localStorage.setItem('f_'+id,$(id).value.trim());if(id==='akey')localStorage.setItem('akey',$(id).value.trim());if(id==='gkey')localStorage.setItem('gkey',$(id).value.trim())}catch(e){}showBoxes()}});
+showBoxes();
+$('ktest').onclick=async()=>{
+  $('kmsg').className='stats';$('kmsg').textContent='Testing…';
+  try{
+    if(ENG()==='tess'){need(window.Tesseract,'Free OCR');$('kmsg').textContent='Free OCR is ready ✓ (no key needed)';return}
+    if(ENG()==='gemini')await viaGemini('Reply with the single word OK.',null,null);else await viaApi('Reply with the single word OK.',null,null);
+    $('kmsg').textContent='Works ✓'}
+  catch(e){$('kmsg').className='stats err';$('kmsg').textContent=e.message}
+};
+// ---- AI engines: Claude "sample" reader first, direct Claude API as backup
+const samplePromise=(async()=>{try{return await claude.use('sample')}catch(e){return null}})();
+samplePromise.then(f=>{sampleFn=f});
+function fail(msg){running=false;$('status').className='err';$('status').textContent=msg;$('stop').classList.add('hidden');draw()}
+async function prep(file){            // shrink big phone photos so they upload fast
+  try{
+    const bmp=await createImageBitmap(file);
+    const sc=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+    const c=document.createElement('canvas');c.width=Math.round(bmp.width*sc);c.height=Math.round(bmp.height*sc);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    return await new Promise(r=>c.toBlob(b=>r(b||file),'image/jpeg',.9));
+  }catch(e){return file}
+}
+const KEY=()=>{try{return(localStorage.getItem('akey')||'').trim()}catch(e){return ''}};
+function post(o){return fetch('https://api.anthropic.com/v1/messages',o).catch(e=>{throw new Error('Could not reach api.anthropic.com ('+(e.message||e)+'). Check: internet/VPN, ad-blocker, that the API key is correct, and that your Anthropic account has credit.')})}
+async function viaApi(P,blob,onText,signal){
+  if(!KEY())throw new Error('API key missing — paste your Anthropic API key (sk-ant-...) in the "AI key" box above, then press Extract again.');
+  const content=[];
+  if(blob){const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(new Error('file read failed'));r.readAsDataURL(blob)});
+    content.push({type:'image',source:{type:'base64',media_type:blob.type||'image/jpeg',data:b64}})}
+  content.push({type:'text',text:P});
+  const resp=await post({method:'POST',headers:Object.assign({'Content-Type':'application/json'},KEY()?{'x-api-key':KEY(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'}:{}),
+    body:JSON.stringify({model:KEY()?($('model').value.trim()||'claude-sonnet-5-5'):'claude-sonnet-4-6',max_tokens:KEY()?4096:1000,messages:[{role:'user',content}]})});
+  const d=await resp.json().catch(()=>({}));
+  if(signal&&signal.aborted){const c=new Error('Stopped');c.code='cancelled';throw c}
+  if(!resp.ok)throw new Error('HTTP '+resp.status+' '+(d.error&&d.error.message||''));
+  const t=(d.content||[]).filter(x=>x.type==='text').map(x=>x.text).join('\n');
+  if(!t)throw new Error('empty answer');
+  onText&&onText({text:t});return {text:t};
+}
+let fbNote=false;
+const toB64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(new Error('file read failed'));r.readAsDataURL(blob)});
+async function tess(blob,onText){
+  need(window.Tesseract,'Free OCR');
+  const L={'Auto-detect':'eng','English':'eng','Urdu':'urd+eng','Pashto':'pus+eng','Arabic':'ara+eng','Hindi':'hin+eng','Persian':'fas+eng'}[$('lang').value]||'eng';
+  const r=await Tesseract.recognize(blob,L,{logger:m=>{if(m.status&&running)$('status').innerHTML='<span class="spin"></span>Free OCR: '+m.status+' '+Math.round((m.progress||0)*100)+'%'}});
+  const t=r.data.text;onText&&onText({text:t});return {text:t};
+}
+async function viaGemini(P,blob,onText){
+  const k=GKEY();if(!k)throw new Error('Gemini key missing — paste your free Gemini key in the engine box (get it at aistudio.google.com/apikey).');
+  const parts=[];if(blob)parts.push({inline_data:{mime_type:blob.type||'image/jpeg',data:await toB64(blob)}});parts.push({text:P});
+  const first=$('gmodel').value.trim()||'gemini-flash-latest';
+  const models=[...new Set([first,'gemini-flash-lite-latest','gemini-2.5-flash'])];
+  const RETRY=[429,500,502,503,504];let resp,d,msg='';
+  outer:for(const m of models){
+    for(let a=0;a<2;a++){
+      try{resp=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(m)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':k},body:JSON.stringify({contents:[{parts}]})})}
+      catch(e){throw new Error('Could not reach Google Gemini ('+(e.message||e)+'). Check internet/VPN/ad-blocker.')}
+      d=await resp.json().catch(()=>({}));
+      if(resp.ok)break outer;
+      msg='Gemini HTTP '+resp.status+' '+((d.error&&d.error.message)||'');
+      if(resp.status===404)break;                       // model name not available → try next model
+      if(!RETRY.includes(resp.status))break outer;      // real error (wrong key etc.)
+      if(running)$('status').innerHTML='<span class="spin"></span>Gemini is busy — retrying ('+m+')…';
+      await new Promise(r=>setTimeout(r,a?5000:2500));
+    }
+  }
+  if(!resp||!resp.ok){const x=new Error(msg+(RETRY.includes(resp&&resp.status)?' — Google is overloaded or your free limit is used up; try again later.':''));x.retryable=!!resp&&RETRY.includes(resp.status);throw x}
+  const t=(((d.candidates||[])[0]||{}).content&&d.candidates[0].content.parts||[]).map(p=>p.text||'').join('');
+  if(!t)throw new Error('Gemini returned no text');
+  onText&&onText({text:t});return {text:t};
+}
+async function ask(P,blob,onText,signal){
+  const e=ENG();
+  if(blob&&e==='tess')return tess(blob,onText);
+  if(!blob&&e==='tess'){if(GKEY())return viaGemini(P,null,onText);if(KEY())return askClaude(P,null,onText,signal);throw new Error('Translation needs an AI key — add a free Gemini key (choose "Gemini AI" in the engine box).')}
+  if(e==='gemini'){try{return await viaGemini(P,blob,onText)}catch(err){if(blob&&err.retryable&&window.Tesseract){fbNote=true;return tess(blob,onText)}throw err}}
+  return askClaude(P,blob,onText,signal);
+}
+async function askClaude(P,blob,onText,signal){
+  const errs=[];
+  if(sampleFn){
+    try{return await sampleFn(P,Object.assign({signal,onText,modelTier:blob?'default':'quick'},blob?{images:blob}:{}))}
+    catch(e){if(e.code==='cancelled'||e.code==='rate_limited')throw e;errs.push('reader: '+(e.code||'')+' '+(e.message||''))}
+  }
+  try{return await viaApi(P,blob,onText,signal)}
+  catch(e){if(e.code==='cancelled')throw e
+    errs.push(e.message||String(e));const x=new Error(errs.join(' — '));x.code='all_failed';throw x}
+}
+
+const need=(o,n)=>{if(typeof o==='undefined')throw new Error(n+' reader could not load (internet/CDN blocked)')};
+async function extractItem(it,P,emit,signal,prog){
+  const f=it.file,k=it.kind;
+  if(k==='img'){const blob=await prep(f);return (await ask(P,blob,({text})=>emit(text),signal)).text}
+  if(k==='text'){let t=await f.text();if(/\.html?$/i.test(f.name)){t=new DOMParser().parseFromString(t,'text/html').body.textContent}return t}
+  const buf=await f.arrayBuffer();
+  if(k==='docx'){need(window.mammoth,'Word');return (await mammoth.extractRawText({arrayBuffer:buf})).value}
+  if(k==='sheet'){need(window.XLSX,'Excel');const wb=XLSX.read(buf,{type:'array'});return wb.SheetNames.map(n=>'## '+n+'\n'+XLSX.utils.sheet_to_csv(wb.Sheets[n])).join('\n\n')}
+  if(k==='pptx'){need(window.JSZip,'PowerPoint');const z=await JSZip.loadAsync(buf);
+    const names=Object.keys(z.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a,b)=>parseInt(a.match(/\d+/g).pop())-parseInt(b.match(/\d+/g).pop()));
+    const out=[];for(let i=0;i<names.length;i++){const x=await z.file(names[i]).async('string');
+      out.push('## Slide '+(i+1)+'\n'+x.replace(/<\/a:p>/g,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/\n{2,}/g,'\n').trim())}
+    return out.join('\n\n')}
+  if(k==='pdf'){need(window.pdfjsLib,'PDF');pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise,N=Math.min(pdf.numPages,40);let acc='',scanned=0;
+    for(let p=1;p<=N;p++){
+      prog('Reading PDF page '+p+' of '+pdf.numPages+'…');
+      const page=await pdf.getPage(p);const tc=await page.getTextContent();
+      let t=tc.items.map(i=>i.str+(i.hasEOL?'\n':' ')).join('').replace(/[ \t]+\n/g,'\n').trim();
+      if(t.length<20){
+        if(scanned>=10){t='[page '+p+': scanned page skipped — limit is 10 scanned pages per file]'}
+        else{scanned++;prog('AI is reading scanned page '+p+'…');
+          const vp=page.getViewport({scale:1.6}),c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+          await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+          const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.88));
+          t=(await ask(P,blob,({text})=>emit(acc+'--- Page '+p+' ---\n'+text),signal)).text.trim()}
+      }
+      acc+=(N>1?'--- Page '+p+' ---\n':'')+t+'\n\n';emit(acc);
+    }
+    if(pdf.numPages>N)acc+='[Only the first '+N+' pages were read]';
+    return acc}
+  throw new Error('unsupported file')
+}
+$('go').onclick=async()=>{
+  if(running||!items.length)return;
+  running=true;fbNote=false;draw();
+  $('status').className='';$('status').innerHTML='<span class="spin"></span>Starting… if a permission box appears, tap Allow.';
+  try{
+    if(!sampleFn)await Promise.race([samplePromise,new Promise(r=>setTimeout(r,4000))]);
+    ctl=new AbortController();$('stop').classList.remove('hidden');
+    const P=makePrompt(),multi=items.length>1;
+    let done='',ok=0,lastErr='';
+    $('out').value='';stats();
+    items.forEach(i=>i.state='waiting');draw();
+    for(let n=0;n<items.length;n++){
+      const it=items[n];it.state='reading…';draw();
+      $('status').innerHTML='<span class="spin"></span>Reading file '+(n+1)+' of '+items.length+'… (pictures can take up to a minute)';
+      const head=multi?'--- File '+(n+1)+': '+it.name+' ---\n':'';
+      try{
+        const emit=t=>{$('out').value=done+head+t;$('out').scrollTop=$('out').scrollHeight;stats()};
+        const txt=await extractItem(it,P,emit,ctl.signal,m=>{$('status').innerHTML='<span class="spin"></span>'+m});
+        if(!txt.trim())throw new Error('no text found in this file');
+        done+=head+txt.trim()+'\n\n';ok++;it.state='done ✓';
+        $('out').value=done.trim();stats();
+      }catch(e){
+        it.state='failed';
+        if(e.code==='cancelled'){lastErr='Stopped.';break}
+        lastErr=e.code==='rate_limited'?'Usage limit reached. Try again later.':'Could not read '+it.name+'. '+(e.message||e.code||'');
+        done+=head+'['+lastErr+']\n\n';$('out').value=done.trim();stats();
+      }
+      draw();
+    }
+    items.forEach(i=>{if(i.state==='waiting'||i.state==='reading…')i.state=''});
+    running=false;$('stop').classList.add('hidden');draw();
+    if(!ok){$('out').value='';stats();return fail(lastErr||'No text could be read from the file.')}
+    $('status').className='';$('status').textContent='Done ✓ — the extracted text is on the right.'+(fbNote?' Gemini was busy, so the free offline OCR was used (handwriting may be less accurate).':'')+(lastErr?' ('+lastErr+')':'');
+    $('out').scrollTop=0;
+    if(window.innerWidth<820)$('out').scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){fail('Something went wrong: '+(e&&(e.message||e.code)||e))}
+};
+$('stop').onclick=()=>ctl&&ctl.abort();
+
+// ---- result tools
+function stats(){const v=$('out').value.trim();$('stats').textContent=(v?v.split(/\s+/).length:0)+' words · '+v.length+' characters'}
+$('out').oninput=stats;
+$('wipe').onclick=()=>{$('out').value='';stats();$('msg').textContent=''};
+$('copy').onclick=async()=>{
+  try{await navigator.clipboard.writeText($('out').value);$('msg').textContent='Copied!'}
+  catch(e){$('out').select();try{document.execCommand('copy')}catch(_){}$('msg').textContent='Text selected — press copy.'}
+};
+$('save').onclick=async()=>{
+  try{const d=await claude.use('downloads');if(!d){$('msg').textContent='Download unavailable here — use Copy.';return}
+    await d.save({filename:'extracted-text.txt',data:new Blob([$('out').value],{type:'text/plain'})})}
+  catch(e){$('msg').textContent='Download cancelled or unavailable — use Copy.'}
+};
+$('tr').onclick=async()=>{
+  const txt=$('out').value.trim();if(!txt){$('tout').value='Extract some text first.';return}
+  $('tr').disabled=true;$('tout').value='Translating…';
+  try{const r=await ask('Translate the following text into '+$('tlang').value+'. Output only the translation, nothing else.\n\n'+txt,null,({text})=>{$('tout').value=text});$('tout').value=r.text.trim()}
+  catch(e){$('tout').value='Translation failed. '+(e.message||e.code||'')}
+  $('tr').disabled=false;
+};
+$('tcopy').onclick=async()=>{try{await navigator.clipboard.writeText($('tout').value)}catch(e){$('tout').select()}};
+</script>
+</body>
+</html>
